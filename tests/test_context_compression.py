@@ -50,6 +50,41 @@ class FactExtractionTests(unittest.TestCase):
         self.assertEqual(updated_facts["tool_result_conclusions"], ["计算结果是 8"])
         self.assertEqual(updated_facts["current_task"], "帮我算 2 + 2 * 3")
 
+    def test_preserves_existing_facts_and_appends_new_conclusions(self) -> None:
+        compressor = ContextCompressor(max_message_count=6, max_prompt_chars=400)
+        session = Session(
+            session_id="window-1",
+            state={"todos": ["写周报"]},
+            fact_summary={
+                "todos": ["买牛奶"],
+                "tool_result_conclusions": ["计算结果是 8"],
+                "current_task": "整理购物清单",
+                "explicit_commitments": ["今晚前发给你"],
+            },
+        )
+        older_messages = [
+            Message(
+                role="tool",
+                content='{"expression":"2 + 2 * 3","value":8}',
+                meta={"tool_name": "calculator"},
+            ),
+            Message(
+                role="tool",
+                content='{"expression":"10 / 2","value":5}',
+                meta={"tool_name": "calculator"},
+            ),
+        ]
+
+        updated_facts = compressor.extract_fact_summary(session, older_messages)
+
+        self.assertEqual(updated_facts["todos"], ["买牛奶", "写周报"])
+        self.assertEqual(
+            updated_facts["tool_result_conclusions"],
+            ["计算结果是 8", "计算结果是 5"],
+        )
+        self.assertEqual(updated_facts["current_task"], "整理购物清单")
+        self.assertEqual(updated_facts["explicit_commitments"], ["今晚前发给你"])
+
     def test_reports_budget_pressure_when_prompt_is_too_large(self) -> None:
         compressor = ContextCompressor(max_message_count=20, max_prompt_chars=80)
         prompt_bundle = {

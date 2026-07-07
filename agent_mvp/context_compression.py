@@ -17,7 +17,7 @@ class ContextCompressor:
         older_messages: list[Message],
     ) -> dict[str, Any]:
         facts = {
-            "todos": list(session.state.get("todos", [])),
+            "todos": list(session.fact_summary.get("todos", [])),
             "tool_result_conclusions": list(
                 session.fact_summary.get("tool_result_conclusions", [])
             ),
@@ -26,6 +26,9 @@ class ContextCompressor:
                 session.fact_summary.get("explicit_commitments", [])
             ),
         }
+        for todo in session.state.get("todos", []):
+            if todo not in facts["todos"]:
+                facts["todos"].append(todo)
         for message in older_messages:
             if message.role == "user":
                 facts["current_task"] = message.content
