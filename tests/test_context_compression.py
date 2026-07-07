@@ -7,6 +7,7 @@ class SessionContextShapeTests(unittest.TestCase):
     def test_new_session_starts_with_slot_based_context(self) -> None:
         session = InMemorySessionStore().get_or_create("window-1")
 
+        self.assertEqual(session.state["todos"], [])
         self.assertEqual(session.fact_summary["todos"], [])
         self.assertEqual(session.fact_summary["tool_result_conclusions"], [])
         self.assertEqual(session.fact_summary["current_task"], "")
