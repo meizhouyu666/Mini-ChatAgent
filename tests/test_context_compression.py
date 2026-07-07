@@ -5,6 +5,17 @@ from agent_mvp.sessions import InMemorySessionStore
 from agent_mvp.types import Message, Session
 
 
+class FakeDialogueSummarizer:
+    def __init__(self, summary: str, should_fail: bool = False) -> None:
+        self.summary = summary
+        self.should_fail = should_fail
+
+    def summarize(self, *, older_messages, fact_summary, previous_summary):
+        if self.should_fail:
+            raise RuntimeError("summary failed")
+        return self.summary
+
+
 class SessionContextShapeTests(unittest.TestCase):
     def test_new_session_starts_with_slot_based_context(self) -> None:
         session = InMemorySessionStore().get_or_create("window-1")
@@ -103,6 +114,50 @@ class FactExtractionTests(unittest.TestCase):
         }
 
         self.assertTrue(compressor.exceeds_prompt_budget(prompt_bundle))
+
+
+class DialogueSummaryTests(unittest.TestCase):
+    def test_updates_dialogue_summary_from_summarizer(self) -> None:
+        summarizer = FakeDialogueSummarizer("用户先记待办，随后继续追问待办状态。")
+        compressor = ContextCompressor(
+            max_message_count=6,
+            max_prompt_chars=400,
+            dialogue_summarizer=summarizer,
+        )
+
+        dialogue_summary = compressor.build_dialogue_summary(
+            older_messages=[Message(role="user", content="帮我记个待办：写周报")],
+            fact_summary={
+                "todos": ["写周报"],
+                "tool_result_conclusions": [],
+                "current_task": "帮我记个待办：写周报",
+                "explicit_commitments": [],
+            },
+            previous_summary="",
+        )
+
+        self.assertEqual(dialogue_summary, "用户先记待办，随后继续追问待办状态。")
+
+    def test_falls_back_to_previous_summary_when_summarizer_fails(self) -> None:
+        summarizer = FakeDialogueSummarizer("", should_fail=True)
+        compressor = ContextCompressor(
+            max_message_count=6,
+            max_prompt_chars=400,
+            dialogue_summarizer=summarizer,
+        )
+
+        dialogue_summary = compressor.build_dialogue_summary(
+            older_messages=[Message(role="user", content="继续刚才那个问题")],
+            fact_summary={
+                "todos": [],
+                "tool_result_conclusions": [],
+                "current_task": "",
+                "explicit_commitments": [],
+            },
+            previous_summary="旧对话摘要",
+        )
+
+        self.assertEqual(dialogue_summary, "旧对话摘要")
 
 
 if __name__ == "__main__":

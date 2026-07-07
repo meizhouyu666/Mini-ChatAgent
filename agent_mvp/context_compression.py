@@ -7,9 +7,15 @@ from .types import Message, Session
 
 
 class ContextCompressor:
-    def __init__(self, max_message_count: int, max_prompt_chars: int) -> None:
+    def __init__(
+        self,
+        max_message_count: int,
+        max_prompt_chars: int,
+        dialogue_summarizer: Any | None = None,
+    ) -> None:
         self.max_message_count = max_message_count
         self.max_prompt_chars = max_prompt_chars
+        self.dialogue_summarizer = dialogue_summarizer
 
     def extract_fact_summary(
         self,
@@ -46,3 +52,21 @@ class ContextCompressor:
         return (
             len(json.dumps(prompt_bundle, ensure_ascii=False)) > self.max_prompt_chars
         )
+
+    def build_dialogue_summary(
+        self,
+        *,
+        older_messages: list[Message],
+        fact_summary: dict[str, Any],
+        previous_summary: str,
+    ) -> str:
+        if self.dialogue_summarizer is None:
+            return previous_summary
+        try:
+            return self.dialogue_summarizer.summarize(
+                older_messages=older_messages,
+                fact_summary=fact_summary,
+                previous_summary=previous_summary,
+            )
+        except Exception:
+            return previous_summary
