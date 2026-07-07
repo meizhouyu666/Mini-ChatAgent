@@ -30,9 +30,19 @@ class StrictJsonLLMTests(unittest.TestCase):
         result = llm.generate(
             {
                 "system_prompt": "You are an agent runtime",
+                "fact_summary": {
+                    "todos": ["milk"],
+                    "tool_result_conclusions": ["The previous calculator result was 8"],
+                    "current_task": "Track todos",
+                    "explicit_commitments": ["I will keep tracking the todo list"],
+                },
+                "dialogue_summary": "The user is following up on the todo they created earlier.",
                 "summary": "user asked about todos",
                 "latest_user_message": "list todos",
                 "messages": [{"role": "user", "content": "remember milk", "meta": {}}],
+                "recent_messages": [
+                    {"role": "assistant", "content": "Saved the todo.", "meta": {}}
+                ],
                 "state": {"todos": ["milk"]},
                 "tools": [
                     {
@@ -50,9 +60,19 @@ class StrictJsonLLMTests(unittest.TestCase):
         self.assertEqual(request["model"], "demo-model")
         self.assertEqual(request["temperature"], 0.0)
         self.assertIn("Return exactly one JSON object", request["messages"][0]["content"])
+        self.assertIn("fact_summary", request["messages"][0]["content"])
+        self.assertIn("dialogue_summary", request["messages"][0]["content"])
+        self.assertIn("recent_messages", request["messages"][0]["content"])
+        self.assertIn("Do not assume any hidden thoughts", request["messages"][0]["content"])
         self.assertIn('"tool_name"', request["messages"][0]["content"])
         self.assertNotIn('"final_answer": {', request["messages"][0]["content"])
-        self.assertIn('"tools"', request["messages"][1]["content"])
+        self.assertIn('"tool_definitions"', request["messages"][1]["content"])
+        self.assertIn('"fact_summary"', request["messages"][1]["content"])
+        self.assertIn('"dialogue_summary"', request["messages"][1]["content"])
+        self.assertIn('"recent_messages"', request["messages"][1]["content"])
+        self.assertIn('"structured_state"', request["messages"][1]["content"])
+        self.assertIn('"current_user_input"', request["messages"][1]["content"])
+        self.assertNotIn('"messages": [', request["messages"][1]["content"])
         self.assertIn("list todos", request["messages"][1]["content"])
 
     def test_extracts_json_from_markdown_code_fence(self) -> None:

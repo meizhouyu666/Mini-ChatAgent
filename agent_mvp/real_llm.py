@@ -71,6 +71,11 @@ class StrictJsonLLM:
                 "Return exactly one JSON object.",
                 "Do not wrap the JSON in markdown, code fences, or extra prose.",
                 "The JSON must match exactly one of these top-level shapes.",
+                "Use the provided context slots in this order: fact_summary, dialogue_summary, structured_state, recent_messages, current_user_input, tool_definitions.",
+                "fact_summary contains stable facts carried across turns.",
+                "dialogue_summary contains compressed continuity for older dialogue.",
+                "recent_messages contains only the recent interaction window.",
+                "Do not assume any hidden thoughts, chain-of-thought, or omitted history beyond these provided slots.",
                 "Example final answer JSON:",
                 json.dumps(final_answer_example, ensure_ascii=False, indent=2),
                 "Example tool call JSON:",
@@ -78,13 +83,15 @@ class StrictJsonLLM:
                 "Use only the provided tools and follow their input_schema exactly.",
             ]
         )
+        recent_messages = prompt_bundle.get("recent_messages", prompt_bundle.get("messages", []))
         user_content = json.dumps(
             {
-                "summary": prompt_bundle["summary"],
-                "latest_user_message": prompt_bundle["latest_user_message"],
-                "messages": prompt_bundle["messages"],
-                "state": prompt_bundle["state"],
-                "tools": prompt_bundle["tools"],
+                "fact_summary": prompt_bundle.get("fact_summary", {}),
+                "dialogue_summary": prompt_bundle.get("dialogue_summary", ""),
+                "structured_state": prompt_bundle["state"],
+                "recent_messages": recent_messages,
+                "current_user_input": prompt_bundle["latest_user_message"],
+                "tool_definitions": prompt_bundle["tools"],
             },
             ensure_ascii=False,
             indent=2,
