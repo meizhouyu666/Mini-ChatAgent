@@ -29,7 +29,6 @@ class ContextCompressor:
         for message in older_messages:
             if message.role == "user":
                 facts["current_task"] = message.content
-        for message in session.messages:
             if message.role == "tool" and message.meta.get("tool_name") == "calculator":
                 payload = json.loads(message.content)
                 value = payload["value"]

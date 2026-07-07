@@ -36,12 +36,18 @@ class FactExtractionTests(unittest.TestCase):
                 meta={"tool_name": "calculator"},
             ),
             Message(role="assistant", content="计算结果是 8"),
+            Message(
+                role="tool",
+                content='{"expression":"6 * 7","value":42}',
+                meta={"tool_name": "calculator"},
+            ),
         ]
 
-        updated_facts = compressor.extract_fact_summary(session, session.messages[:-2])
+        older_messages = session.messages[:-2]
+        updated_facts = compressor.extract_fact_summary(session, older_messages)
 
         self.assertEqual(updated_facts["todos"], ["写周报"])
-        self.assertIn("计算结果是 8", updated_facts["tool_result_conclusions"])
+        self.assertEqual(updated_facts["tool_result_conclusions"], ["计算结果是 8"])
         self.assertEqual(updated_facts["current_task"], "帮我算 2 + 2 * 3")
 
     def test_reports_budget_pressure_when_prompt_is_too_large(self) -> None:
