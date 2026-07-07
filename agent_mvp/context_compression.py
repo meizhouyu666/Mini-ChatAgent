@@ -6,6 +6,10 @@ from typing import Any
 from .types import Message, Session
 
 
+class DialogueSummaryError(Exception):
+    pass
+
+
 class ContextCompressor:
     def __init__(
         self,
@@ -68,5 +72,5 @@ class ContextCompressor:
                 fact_summary=fact_summary,
                 previous_summary=previous_summary,
             )
-        except Exception:
+        except DialogueSummaryError:
             return previous_summary

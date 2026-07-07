@@ -1,6 +1,6 @@
 import unittest
 
-from agent_mvp.context_compression import ContextCompressor
+from agent_mvp.context_compression import ContextCompressor, DialogueSummaryError
 from agent_mvp.sessions import InMemorySessionStore
 from agent_mvp.types import Message, Session
 
@@ -12,7 +12,7 @@ class FakeDialogueSummarizer:
 
     def summarize(self, *, older_messages, fact_summary, previous_summary):
         if self.should_fail:
-            raise RuntimeError("summary failed")
+            raise DialogueSummaryError("summary failed")
         return self.summary
 
 
@@ -117,6 +117,25 @@ class FactExtractionTests(unittest.TestCase):
 
 
 class DialogueSummaryTests(unittest.TestCase):
+    def test_returns_previous_summary_when_summarizer_is_missing(self) -> None:
+        compressor = ContextCompressor(
+            max_message_count=6,
+            max_prompt_chars=400,
+        )
+
+        dialogue_summary = compressor.build_dialogue_summary(
+            older_messages=[Message(role="user", content="继续刚才那个问题")],
+            fact_summary={
+                "todos": [],
+                "tool_result_conclusions": [],
+                "current_task": "",
+                "explicit_commitments": [],
+            },
+            previous_summary="旧对话摘要",
+        )
+
+        self.assertEqual(dialogue_summary, "旧对话摘要")
+
     def test_updates_dialogue_summary_from_summarizer(self) -> None:
         summarizer = FakeDialogueSummarizer("用户先记待办，随后继续追问待办状态。")
         compressor = ContextCompressor(
